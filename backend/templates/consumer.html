@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Consumer scan — AgriTrace</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+<link rel="icon" href="{{ url_for('static', filename='img/agritrace-logo.png') }}">
+</head>
+<body>
+<div class="split-screen">
+  <div class="split-visual">
+    <div>
+      <div class="landing-logo-row">
+        <img src="{{ url_for('static', filename='img/agritrace-logo.png') }}" alt="AgriTrace logo" class="landing-logo">
+        <div class="landing-credit">Developed by <b>BlockPulse</b></div>
+      </div>
+      <div class="tag" style="margin-top:26px;">AgriTrace</div>
+      <h1>Know where it grew.</h1>
+      <p class="desc">Scan the QR code on the pack, or type the batch code printed underneath it, to see this produce's full farm-to-fork journey — verified against a tamper-evident hash chain and anchored on Polygon.</p>
+    </div>
+  </div>
+  <div class="split-form">
+    <div class="login-card">
+      <h2>Look up a batch</h2>
+      <p class="hint" style="margin-bottom:20px;">No account needed.</p>
+      <form onsubmit="event.preventDefault(); const v=document.getElementById('code').value.trim(); if(v) window.location='/verify/'+encodeURIComponent(v);">
+        <div class="field">
+          <label for="code">Batch code</label>
+          <input id="code" placeholder="e.g. BAN-2026-001" required autofocus style="text-transform:uppercase;">
+        </div>
+        <button class="btn" type="submit" style="width:100%; justify-content:center;">View passport</button>
+      </form>
+    </div>
+  </div>
+</div>
+</body>
+</html>

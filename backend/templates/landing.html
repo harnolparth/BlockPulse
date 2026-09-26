@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AgriTrace — Farm-to-fork produce traceability</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+<link rel="icon" href="{{ url_for('static', filename='img/agritrace-logo.png') }}">
+</head>
+<body>
+<div class="split-screen">
+  <div class="split-visual">
+    <div>
+      <div class="landing-logo-row">
+        <img src="{{ url_for('static', filename='img/agritrace-logo.png') }}" alt="AgriTrace logo" class="landing-logo">
+        <div class="landing-credit">Developed by <b>BlockPulse</b></div>
+      </div>
+
+      <h1>Every crate, tracked from soil to shelf.</h1>
+      <p class="desc">
+        AgriTrace is a low-cost IoT traceability platform that follows produce
+        from the farm all the way to the consumer. As a batch moves through
+        harvesting, collection, transport, storage and retail, each stage adds
+        a verified record to its journey — so anyone, at any point in the
+        chain, can see exactly where a batch has been, how it was handled,
+        and whether it stayed within safe conditions along the way.
+      </p>
+    </div>
+
+    <div class="landing-features">
+      <div class="landing-feature">
+        <span class="landing-feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 2"/></svg>
+        </span>
+        <div>
+          <div class="landing-feature-title">Full journey visibility</div>
+          <div class="landing-feature-desc">Farm, collection, transport, storage, distribution and retail — one continuous, shared record.</div>
+        </div>
+      </div>
+      <div class="landing-feature">
+        <span class="landing-feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3z"/><path d="M9.5 12l1.8 1.8L15 10.2"/></svg>
+        </span>
+        <div>
+          <div class="landing-feature-title">Tamper-evident records</div>
+          <div class="landing-feature-desc">Every record is linked to the one before it, so any change to the history is immediately detectable.</div>
+        </div>
+      </div>
+      <div class="landing-feature">
+        <span class="landing-feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17h.01"/></svg>
+        </span>
+        <div>
+          <div class="landing-feature-title">Real-time alerts</div>
+          <div class="landing-feature-desc">Cold-chain breaks and handling issues are flagged the moment a sensor reading crosses a safe limit.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="split-form">
+    <div class="login-card">
+      <h2>Sign in to your portal</h2>
+      <p class="hint" style="margin-bottom:20px;">Farmer, collection centre, distributor and admin portals all live behind one login.</p>
+      <a class="btn" href="{{ url_for('login_page') }}" style="width:100%; justify-content:center;">Continue to sign in</a>
+      <div class="divider"></div>
+      <p class="hint">Public verification needs no account — try <a href="{{ url_for('consumer_page') }}">Consumer scan</a> once a demo batch exists.</p>
+    </div>
+  </div>
+</div>
+</body>
+</html>

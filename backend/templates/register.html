@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Register batch — AgriTrace{% endblock %}
+{% block page_title %}Register a batch{% endblock %}
+{% block page_sub %}<div class="topbar-sub">Creates the genesis record and the first hash-chained HARVEST event.</div>{% endblock %}
+
+{% block content %}
+<div class="grid" style="grid-template-columns:1.3fr .9fr;">
+  <div class="panel">
+    <form method="post" action="{{ url_for('register_page') }}">
+      <div class="field-row">
+        <div class="field">
+          <label for="produce_type">Produce</label>
+          <input id="produce_type" name="produce_type" value="Banana" required>
+        </div>
+        <div class="field">
+          <label for="variety">Variety <span class="hint">(optional)</span></label>
+          <input id="variety" name="variety" placeholder="e.g. Malbhog">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="quantity_kg">Quantity (kg)</label>
+          <input id="quantity_kg" name="quantity_kg" type="number" step="0.1" min="0" required>
+        </div>
+        <div class="field">
+          <label for="harvest_date">Harvest date</label>
+          <input id="harvest_date" name="harvest_date" type="date">
+        </div>
+      </div>
+      <div class="field">
+        <label for="origin_location">Origin location</label>
+        <input id="origin_location" name="origin_location" placeholder="e.g. Plot 4, Ri-Bhoi, Meghalaya" required>
+      </div>
+      <div class="field">
+        <label for="node_id">IoT node <span class="hint">(optional — links live sensor readings to this batch)</span></label>
+        <select id="node_id" name="node_id">
+          <option value="">No node — manual tracking only</option>
+          {% for n in nodes %}
+          <option value="{{ n['id'] }}">{{ n['node_code'] }} — {{ n['label'] }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <button class="btn" type="submit">Register batch &amp; anchor genesis event</button>
+    </form>
+  </div>
+
+  <div class="panel panel-flat">
+    <h3>What happens on submit</h3>
+    <div class="event-item" style="border-color:rgba(255,255,255,0.12);">
+      <div class="event-dot" style="background:#C0932F;"></div>
+      <div class="event-body">
+        <div class="event-title" style="color:#fff;">1. Batch code generated</div>
+        <div class="event-meta" style="color:#B9CBBD;">e.g. BAN-2026-001</div>
+      </div>
+    </div>
+    <div class="event-item" style="border-color:rgba(255,255,255,0.12);">
+      <div class="event-dot" style="background:#C0932F;"></div>
+      <div class="event-body">
+        <div class="event-title" style="color:#fff;">2. Genesis hash computed</div>
+        <div class="event-meta" style="color:#B9CBBD;">Seeds the batch's hash chain</div>
+      </div>
+    </div>
+    <div class="event-item" style="border:none;">
+      <div class="event-dot" style="background:#C0932F;"></div>
+      <div class="event-body">
+        <div class="event-title" style="color:#fff;">3. HARVEST event anchored</div>
+        <div class="event-meta" style="color:#B9CBBD;">Written to the Blockchain Service (Polygon)</div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

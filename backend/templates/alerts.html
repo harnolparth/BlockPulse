@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Alerts — AgriTrace{% endblock %}
+{% block page_title %}Alerts{% endblock %}
+{% block page_sub %}<div class="topbar-sub">Temperature breaches, tamper detections and gas anomalies across all nodes</div>{% endblock %}
+
+{% block content %}
+<div class="panel">
+  {% if alerts %}
+  {% for a in alerts %}
+  <div class="alert-row">
+    <div class="alert-icon {{ a['severity'] }}">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17h.01"/></svg>
+    </div>
+    <div style="flex:1;">
+      <div class="event-title">{{ a['message'] }}</div>
+      <div class="event-meta">
+        <a href="{{ url_for('batch_detail', batch_code=a['batch_code']) }}">{{ a['batch_code'] }}</a>
+        · {{ a['produce_type'] }} · {{ a['created_at'] }}
+        · <span class="badge badge-{{ 'critical' if a['severity']=='critical' else ('warn' if a['severity'] in ('high','medium') else 'ok') }}">{{ a['severity']|capitalize }}</span>
+        {% if a['resolved'] %}· <span class="badge badge-ok">Resolved</span>{% endif %}
+      </div>
+    </div>
+    {% if not a['resolved'] %}
+    <form method="post" action="{{ url_for('resolve_alert', alert_id=a['id']) }}">
+      <button class="btn btn-secondary btn-sm" type="submit">Mark resolved</button>
+    </form>
+    {% endif %}
+  </div>
+  {% endfor %}
+  {% else %}
+  <div class="empty-state"><h3>No alerts</h3><p>Every node is reporting within thresholds.</p></div>
+  {% endif %}
+</div>
+{% endblock %}

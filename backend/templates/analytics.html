@@ -1,0 +1,202 @@
+{% extends "base.html" %}
+{% block title %}Analytics — AgriTrace{% endblock %}
+{% block page_title %}Analytics{% endblock %}
+{% block page_sub %}<div class="topbar-sub">Network-wide trends, plus a full drill-down for any single batch</div>{% endblock %}
+
+{% block content %}
+
+<div class="panel" style="margin-bottom:18px;">
+  <div class="panel-header"><h3>Inspect a batch</h3></div>
+  <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+    <select id="batchSelect" style="max-width:360px;">
+      <option value="">Select a batch to see its own readings, trust breakdown and timeline…</option>
+      {% for b in batches %}
+      <option value="{{ b['batch_code'] }}">{{ b['batch_code'] }} — {{ b['produce_type'] }} ({{ b['status']|capitalize }})</option>
+      {% endfor %}
+    </select>
+    <span class="hint" id="batchHint">Or open any batch's own page for the full event chain.</span>
+  </div>
+</div>
+
+<div id="batchPanel" style="display:none;"></div>
+
+<div id="networkPanel">
+  <div class="grid grid-4" id="stat-cards">
+    <div class="stat"><div class="stat-label">Total batches</div><div class="stat-value" id="s-total">–</div></div>
+    <div class="stat"><div class="stat-label">Avg. trust score</div><div class="stat-value accent" id="s-trust">–</div></div>
+    <div class="stat"><div class="stat-label">Open alerts</div><div class="stat-value" id="s-alerts">–</div></div>
+    <div class="stat"><div class="stat-label">Chain anchors</div><div class="stat-value" id="s-anchors">–</div></div>
+  </div>
+
+  <div class="grid grid-2">
+    <div class="panel">
+      <div class="panel-header"><h3>Temperature trend</h3></div>
+      <canvas class="chart-canvas" id="tempChart"></canvas>
+      <p class="hint">Dashed line marks the 12°C cold-chain limit. Most recent readings, pooled across every active node.</p>
+    </div>
+    <div class="panel">
+      <div class="panel-header"><h3>Humidity trend</h3></div>
+      <canvas class="chart-canvas" id="humChart"></canvas>
+      <p class="hint">Relative humidity at the same readings, on its own scale.</p>
+    </div>
+  </div>
+
+  <div class="grid grid-2">
+    <div class="panel">
+      <div class="panel-header"><h3>Average time to reach each stage</h3></div>
+      <canvas class="chart-canvas" id="stageDurationChart" style="height:200px;"></canvas>
+      <p class="hint">Hours elapsed, on average, between a batch entering the previous stage and this one — shows where the chain is actually losing time.</p>
+    </div>
+    <div class="panel">
+      <div class="panel-header"><h3>Trust score distribution</h3></div>
+      <canvas class="chart-canvas" id="trustBar" style="height:200px;"></canvas>
+      <p class="hint">How many tracked batches fall into each trust grade right now.</p>
+    </div>
+  </div>
+
+  <div class="grid grid-2">
+    <div class="panel">
+      <div class="panel-header"><h3>Batches by stage</h3></div>
+      <canvas class="chart-canvas" id="statusDonut"></canvas>
+    </div>
+    <div class="panel">
+      <div class="panel-header"><h3>Alert types</h3></div>
+      <canvas class="chart-canvas" id="alertDonut"></canvas>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block head %}
+<script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+<script>
+const STAGE_COLORS = {farm:"#3F6B2C", collection:"#2E6B4B", transport:"#39567F", warehouse:"#7A5A16", distributor:"#6C3E85", retail:"#8A4536", consumer:"#296459"};
+const GRADE_COLORS = {A:"#3E8D5C", B:"#C0932F", C:"#B4791F", D:"#B23B34"};
+const PALETTE = ["#3E8D5C","#4FA96C","#C0932F","#39567F","#8A4536","#6C3E85","#296459"];
+
+async function loadNetworkAnalytics(){
+  const res = await fetch("/api/analytics/summary");
+  const d = await res.json();
+  document.getElementById("s-total").textContent = d.total_batches;
+  document.getElementById("s-trust").textContent = d.avg_trust_score;
+  document.getElementById("s-alerts").textContent = d.open_alerts;
+  document.getElementById("s-anchors").textContent = d.total_anchors;
+
+  AgriCharts.drawLineChart(document.getElementById("tempChart"), d.temp_series, {threshold: 12, thresholdLabel: "12°C limit", color: "#3E8D5C"});
+  AgriCharts.drawLineChart(document.getElementById("humChart"), d.humidity_series, {color: "#39567F"});
+
+  const stageOrder = ["HARVEST","COLLECTION","TRANSPORT_DISPATCH","WAREHOUSE_IN","DISTRIBUTOR_RECEIVE","RETAIL_RECEIVE","SOLD"];
+  const stageLabels = {HARVEST:"Harvest", COLLECTION:"Collection", TRANSPORT_DISPATCH:"Transport", WAREHOUSE_IN:"Warehouse", DISTRIBUTOR_RECEIVE:"Distributor", RETAIL_RECEIVE:"Retail", SOLD:"Sold"};
+  const durationItems = stageOrder.filter(k => d.stage_durations[k] !== undefined).map(k => ({label: stageLabels[k], value: d.stage_durations[k], color: "#3E8D5C"}));
+  AgriCharts.drawBarChart(document.getElementById("stageDurationChart"), durationItems, {valueSuffix: "h", horizontal: true, labelWidth: 90, emptyMessage: "Not enough stage transitions yet"});
+
+  const statusSegs = Object.entries(d.status_counts).map(([k,v]) => ({label: k, value: v, color: STAGE_COLORS[k] || "#3E8D5C"}));
+  AgriCharts.drawDonut(document.getElementById("statusDonut"), statusSegs.length ? statusSegs : [{label:"none", value:1, color:"#E9E4D6"}]);
+
+  const gradeItems = ["A","B","C","D"].map(g => ({label: "Grade " + g, value: d.trust_distribution[g] || 0, color: GRADE_COLORS[g]}));
+  AgriCharts.drawBarChart(document.getElementById("trustBar"), gradeItems, {emptyMessage:"No batches yet"});
+
+  const alertSegs = Object.entries(d.alert_types).map(([k,v],i) => ({label:k.replace("_"," "), value:v, color:PALETTE[i % PALETTE.length]}));
+  AgriCharts.drawDonut(document.getElementById("alertDonut"), alertSegs.length ? alertSegs : [{label:"none", value:1, color:"#E9E4D6"}]);
+}
+
+function trustGaugeHtml(trust){
+  const color = trust.score>=85 ? "#3E8D5C" : (trust.score>=65 ? "#C0932F" : "#B23B34");
+  return `<div class="trust-gauge" style="background:conic-gradient(${color} ${trust.score*3.6}deg, #E9E4D6 0deg);">
+    <div class="trust-gauge-inner"><div class="score">${trust.score}</div><div class="grade">Grade ${trust.grade}</div></div>
+  </div>`;
+}
+
+async function loadBatchAnalytics(code){
+  const panel = document.getElementById("batchPanel");
+  const netPanel = document.getElementById("networkPanel");
+  if(!code){ panel.style.display = "none"; netPanel.style.display = "block"; return; }
+
+  const res = await fetch(`/api/batches/${encodeURIComponent(code)}`);
+  if(!res.ok){ panel.innerHTML = `<div class="panel"><div class="empty-state"><p>Batch not found.</p></div></div>`; panel.style.display="block"; netPanel.style.display="none"; return; }
+  const d = await res.json();
+  netPanel.style.display = "none";
+
+  const tempPts = d.readings.filter(r => r.temperature_c !== null).map(r => ({t:r.captured_at, v:r.temperature_c}));
+  const humPts = d.readings.filter(r => r.humidity_pct !== null).map(r => ({t:r.captured_at, v:r.humidity_pct}));
+  const gasPts = d.readings.filter(r => r.gas_ppm !== null).map(r => ({t:r.captured_at, v:r.gas_ppm}));
+
+  const breakdownRows = d.trust.breakdown.map(f => `
+    <div style="display:flex; justify-content:space-between; font-size:.82rem; padding:5px 0; border-bottom:1px solid var(--line-200);">
+      <span>${f.factor}</span>
+      <span style="color:${f.impact < 0 ? '#B23B34' : '#3E8D5C'}; font-weight:600;">${f.detail}</span>
+    </div>`).join("");
+
+  const eventRows = d.events.map((e,i) => {
+    const prevTime = i>0 ? new Date(d.events[i-1].created_at) : null;
+    const thisTime = new Date(e.created_at);
+    const gapH = prevTime ? Math.max(0, Math.round((thisTime-prevTime)/3600000*10)/10) : null;
+    return `<div class="event-item">
+      <div class="event-dot"></div>
+      <div class="event-body">
+        <div class="event-title">${e.event_type.replace(/_/g," ").replace(/\w\S*/g, t=>t[0].toUpperCase()+t.slice(1).toLowerCase())}${gapH!==null ? ` <span class="hint">(+${gapH}h)</span>` : ""}</div>
+        <div class="event-meta">${e.created_at} · ${e.location || "—"}${e.anchored ? " · <span class=\"badge badge-ok\">Anchored</span>" : ""}</div>
+      </div>
+    </div>`;
+  }).join("");
+
+  panel.innerHTML = `
+    <div class="panel panel-flat" style="display:flex; justify-content:space-between; align-items:center; gap:20px; flex-wrap:wrap; margin-bottom:18px;">
+      <div>
+        <div style="color:#B9CBBD; font-size:.8rem;">${d.batch.batch_code}</div>
+        <h2 style="color:#fff; margin:2px 0 4px 0;">${d.batch.produce_type}${d.batch.variety ? " · " + d.batch.variety : ""}</h2>
+        <div style="color:#B9CBBD; font-size:.85rem;">${d.batch.quantity_kg} kg · currently at <b style="color:#fff;">${d.batch.status}</b> · ${d.readings.length} readings · ${d.alerts.filter(a=>!a.resolved).length} open alert(s)</div>
+      </div>
+      ${trustGaugeHtml(d.trust)}
+    </div>
+
+    <div class="grid grid-2">
+      <div class="panel">
+        <div class="panel-header"><h3>Temperature for this batch</h3></div>
+        <canvas class="chart-canvas" id="batchTempChart"></canvas>
+      </div>
+      <div class="panel">
+        <div class="panel-header"><h3>Humidity for this batch</h3></div>
+        <canvas class="chart-canvas" id="batchHumChart"></canvas>
+      </div>
+    </div>
+
+    <div class="grid grid-2">
+      <div class="panel">
+        <div class="panel-header"><h3>Gas / spoilage indicator</h3></div>
+        <canvas class="chart-canvas" id="batchGasChart"></canvas>
+      </div>
+      <div class="panel">
+        <div class="panel-header"><h3>Trust score breakdown</h3></div>
+        ${breakdownRows || '<p class="hint">No data yet.</p>'}
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header"><h3>Timeline, with time-in-transit</h3></div>
+      ${eventRows || '<p class="hint">No events yet.</p>'}
+    </div>
+
+    <div style="text-align:right; margin-top:-6px; margin-bottom:18px;">
+      <a class="hint" href="/batch/${encodeURIComponent(d.batch.batch_code)}">Open full batch record →</a>
+    </div>
+  `;
+  panel.style.display = "block";
+
+  AgriCharts.drawLineChart(document.getElementById("batchTempChart"), tempPts, {threshold: 12, thresholdLabel:"12°C limit", color:"#3E8D5C"});
+  AgriCharts.drawLineChart(document.getElementById("batchHumChart"), humPts, {color:"#39567F"});
+  AgriCharts.drawLineChart(document.getElementById("batchGasChart"), gasPts, {color:"#C0932F"});
+}
+
+window.addEventListener("DOMContentLoaded", () => {
+  const batchSelect = document.getElementById("batchSelect");
+  if (batchSelect) {
+    batchSelect.addEventListener("change", (e) => loadBatchAnalytics(e.target.value));
+  }
+  loadNetworkAnalytics();
+});
+</script>
+{% endblock %}
+
+

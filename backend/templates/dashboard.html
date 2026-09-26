@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% import "_icons.html" as icons %}
+{% block title %}Dashboard — AgriTrace{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+{% block page_sub %}<div class="topbar-sub">Welcome back, {{ user.name }}</div>{% endblock %}
+{% block topbar_action %}
+  {% if user.role in ('farmer','admin') %}
+  <a class="btn" href="{{ url_for('register_page') }}">+ Register batch</a>
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+
+<div class="grid grid-4">
+  <div class="stat">
+    <span class="stat-icon forest"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg></span>
+    <div class="stat-label">Batches tracked</div>
+    <div class="stat-value">{{ total }}</div>
+    <div class="stat-foot">across the network</div>
+  </div>
+  <div class="stat">
+    <span class="stat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="1" y="7" width="13" height="9"/><path d="M14 10h4l3 3v3h-7z"/><circle cx="6" cy="18" r="1.6"/><circle cx="17.5" cy="18" r="1.6"/></svg></span>
+    <div class="stat-label">In collection / transit</div>
+    <div class="stat-value accent">{{ in_transit }}</div>
+    <div class="stat-foot">moving right now</div>
+  </div>
+  <div class="stat">
+    <span class="stat-icon {{ 'red' if open_alerts else '' }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17h.01"/></svg></span>
+    <div class="stat-label">Open alerts</div>
+    <div class="stat-value {{ 'warn' if open_alerts else '' }}">{{ open_alerts }}</div>
+    <div class="stat-foot">need attention</div>
+  </div>
+  <div class="stat">
+    <span class="stat-icon amber"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></span>
+    <div class="stat-label">On-chain anchors</div>
+    <div class="stat-value">{{ anchors }}</div>
+    <div class="stat-foot">events anchored to Polygon</div>
+  </div>
+</div>
+
+{% if avg_trust is not none %}
+<div class="panel panel-flat" style="margin-top:18px; display:flex; align-items:center; justify-content:space-between; gap:20px; flex-wrap:wrap;">
+  <div style="position:relative;">
+    <div style="color:#B9CBBD; font-size:.8rem;">Network trust score</div>
+    <div style="font-family:var(--font-display); font-size:2.2rem; font-weight:700; color:#fff;">{{ avg_trust }}<span style="font-size:1rem; color:#B9CBBD;"> / 100</span></div>
+    <div style="color:#B9CBBD; font-size:.82rem; max-width:52ch;">Average across every tracked batch's hash-chain integrity, cold-chain adherence, tamper history and anchoring coverage.</div>
+  </div>
+  <a class="btn btn-amber" href="{{ url_for('track_page') }}">Review batches →</a>
+</div>
+{% endif %}
+
+<div class="panel">
+  <div class="panel-header">
+    <h2>{{ 'Your batches' if user.role == 'farmer' else 'Recent batches' }}</h2>
+    <a href="{{ url_for('track_page') }}" class="hint">View all →</a>
+  </div>
+  {% if batches %}
+  <table>
+    <thead><tr><th>Batch</th><th>Produce</th><th>Stage</th><th>Quantity</th><th>Origin</th><th></th></tr></thead>
+    <tbody>
+    {% for b in batches %}
+      <tr class="clickable" onclick="window.location='{{ url_for('batch_detail', batch_code=b['batch_code']) }}'">
+        <td class="mono">{{ b['batch_code'] }}</td>
+        <td>{{ b['produce_type'] }}{% if b['variety'] %} <span class="hint">({{ b['variety'] }})</span>{% endif %}</td>
+        <td><span class="badge badge-{{ b['status'] }}">{{ b['status']|capitalize }}</span></td>
+        <td>{{ b['quantity_kg'] }} kg</td>
+        <td>{{ b['origin_location'] }}</td>
+        <td><a href="{{ url_for('batch_detail', batch_code=b['batch_code']) }}">Open →</a></td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty-state">
+    <h3>No batches yet</h3>
+    <p>{{ 'Register your first batch to start the traceability record.' if user.role in ('farmer','admin') else 'Batches registered by farmers will appear here.' }}</p>
+  </div>
+  {% endif %}
+</div>
+
+<div class="panel">
+  <div class="panel-header">
+    <h2>Recent alerts</h2>
+    <a href="{{ url_for('alerts_page') }}" class="hint">View all →</a>
+  </div>
+  {% if recent_alerts %}
+    {% for a in recent_alerts %}
+    <div class="alert-row">
+      <div class="alert-icon {{ a['severity'] }}">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17h.01"/></svg>
+      </div>
+      <div>
+        <div class="event-title">{{ a['message'] }}</div>
+        <div class="event-meta">{{ a['batch_code'] }} · {{ a['created_at'] }} · <span class="badge badge-{{ 'critical' if a['severity']=='critical' else ('warn' if a['severity'] in ('high','medium') else 'ok') }}">{{ a['severity']|capitalize }}</span></div>
+      </div>
+    </div>
+    {% endfor %}
+  {% else %}
+  <div class="empty-state"><p>No alerts. Cold chain and integrity checks are all clear.</p></div>
+  {% endif %}
+</div>
+
+{% endblock %}

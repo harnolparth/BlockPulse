@@ -1,0 +1,85 @@
+{% import "_icons.html" as icons %}
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}AgriTrace{% endblock %}</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+<link rel="icon" href="{{ url_for('static', filename='img/agritrace-logo.png') }}">
+{% block head %}{% endblock %}
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar">
+    <a href="{{ url_for('dashboard') }}" class="brand">
+      <img src="{{ url_for('static', filename='img/agritrace-logo.png') }}" alt="AgriTrace logo" class="brand-logo">
+      <span class="brand-credit">Developed by <b>BlockPulse</b></span>
+    </a>
+
+    <nav class="nav-group">
+      <div class="nav-label">Overview</div>
+      <a class="nav-link {{ 'active' if request.endpoint == 'dashboard' }}" href="{{ url_for('dashboard') }}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
+        Dashboard
+      </a>
+      <a class="nav-link {{ 'active' if request.endpoint == 'track_page' }}" href="{{ url_for('track_page') }}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        Track batches
+      </a>
+      {% if user.role in ('farmer','admin') %}
+      <a class="nav-link {{ 'active' if request.endpoint == 'register_page' }}" href="{{ url_for('register_page') }}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14M5 12h14"/></svg>
+        Register batch
+      </a>
+      {% endif %}
+      <a class="nav-link {{ 'active' if request.endpoint == 'blockchain_page' or request.endpoint == 'blockchain_tx' }}" href="{{ url_for('blockchain_page') }}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><path d="M10 6.5h4M6.5 10v4M17.5 10v4M10 17.5h4"/></svg>
+        Blockchain
+      </a>
+      <a class="nav-link {{ 'active' if request.endpoint == 'analytics_page' }}" href="{{ url_for('analytics_page') }}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20V10M12 20V4M20 20v-7"/></svg>
+        Analytics
+      </a>
+      <a class="nav-link {{ 'active' if request.endpoint == 'alerts_page' }}" href="{{ url_for('alerts_page') }}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17h.01"/></svg>
+        Alerts
+      </a>
+      <a class="nav-link {{ 'active' if request.endpoint == 'database_page' }}" href="{{ url_for('database_page') }}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><ellipse cx="12" cy="5.5" rx="8" ry="3"/><path d="M4 5.5V12c0 1.7 3.6 3 8 3s8-1.3 8-3V5.5"/><path d="M4 12v6.5c0 1.7 3.6 3 8 3s8-1.3 8-3V12"/></svg>
+        Database
+      </a>
+      <div class="nav-label">Public</div>
+      <a class="nav-link" href="{{ url_for('consumer_page') }}" target="_blank">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="6" height="6"/><rect x="14" y="4" width="6" height="6"/><rect x="4" y="14" width="6" height="6"/><path d="M14 14h2.5M14 19h6M19.5 14v6"/></svg>
+        Consumer scan
+      </a>
+    </nav>
+
+    <div class="sidebar-foot">
+      <div class="user-chip">
+        <div class="user-avatar">{{ icons.role_icon(user.role) if user else '' }}</div>
+        <div class="user-meta">
+          <div class="user-name">{{ user.name if user else '' }}</div>
+          <div class="user-role">{{ user.role if user else '' }}</div>
+        </div>
+      </div>
+      <a class="logout-link" href="{{ url_for('logout') }}">Sign out</a>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div>
+        <h1>{% block page_title %}{% endblock %}</h1>
+        {% block page_sub %}{% endblock %}
+      </div>
+      <div>{% block topbar_action %}{% endblock %}</div>
+    </div>
+    <div class="content">
+      {% block content %}{% endblock %}
+    </div>
+  </div>
+</div>
+</body>
+</html>

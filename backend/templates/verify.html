@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ batch['batch_code'] }} — Digital Passport — AgriTrace</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+<link rel="icon" href="{{ url_for('static', filename='img/agritrace-logo.png') }}">
+</head>
+{% import "_icons.html" as icons %}
+<body style="background:var(--paper-100);">
+<div class="public-shell">
+  <div class="public-header">
+    <div style="text-align:center;">
+      <img src="{{ url_for('static', filename='img/agritrace-logo.png') }}" alt="AgriTrace logo" class="public-brand-logo">
+      <div class="public-brand-credit">Developed by <b>BlockPulse</b></div>
+    </div>
+    <div>
+      <div style="font-family:var(--font-display); font-weight:700; font-size:1.15rem;">AgriTrace digital passport</div>
+      <div class="hint">Independently verifiable farm-to-fork record</div>
+    </div>
+  </div>
+
+  <div class="produce-hero">
+    <div>
+      <h1>{{ batch['produce_type'] }}{% if batch['variety'] %} · {{ batch['variety'] }}{% endif %}</h1>
+      <div class="origin">Batch {{ batch['batch_code'] }} · {{ batch['quantity_kg'] }} kg · harvested {{ batch['harvest_date'] }}</div>
+      <div class="origin">{% if farmer and farmer['organisation'] %}Grown by {{ farmer['organisation'] }}{% endif %}</div>
+    </div>
+    <div class="trust-gauge" style="background:conic-gradient({{ '#4FA96C' if trust.score>=85 else ('#C0932F' if trust.score>=65 else '#E4726A') }} {{ trust.score*3.6 }}deg, rgba(255,255,255,0.15) 0deg);">
+      <div class="trust-gauge-inner">
+        <div class="score">{{ trust.score }}</div>
+        <div class="grade">Trust · {{ trust.grade }}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid grid-2" style="margin-top:20px;">
+    <div class="panel">
+      <div class="panel-header"><h3>Journey</h3></div>
+      <div class="journey">
+        {% for s in stage_flow %}
+        <div class="journey-stage {{ 'done' if loop.index0 < stage_index else ('current' if loop.index0 == stage_index else '') }}">
+          <div class="line"></div>
+          <div class="dot">{{ icons.stage_icon(s.key) }}</div>
+          <div class="label">{{ s.label }}</div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    <div class="panel" style="text-align:center;">
+      <div class="panel-header"><h3>Scan &amp; share</h3></div>
+      <div class="qr-box">
+        <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={{ verify_url | urlencode }}" alt="QR code linking to this passport" width="150" height="150">
+      </div>
+      <p class="hint" style="margin-top:10px; word-break:break-all;">{{ verify_url }}</p>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-header"><h3>Integrity check</h3></div>
+    <p>
+      {% if trust.chain_valid %}
+      <span class="badge badge-ok">✓ Hash chain verified</span> Every event below was re-hashed from its stored data just now and matches the record originally written — nothing has been altered.
+      {% else %}
+      <span class="badge badge-critical">⚠ Chain integrity issue detected</span> One or more records do not match their original hash. Treat this passport as unverified.
+      {% endif %}
+    </p>
+    <div class="grid grid-2" style="margin-top:4px;">
+      {% for f in trust.breakdown %}
+      <div style="display:flex; justify-content:space-between; font-size:.85rem; padding:6px 0; border-bottom:1px solid var(--line-200);">
+        <span>{{ f.factor }}</span>
+        <span style="color:{{ '#B23B34' if f.impact < 0 else '#3E8D5C' }}; font-weight:600;">{{ f.detail }}</span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-header"><h3>Recorded events</h3></div>
+    {% for e in events %}
+    <div class="event-item">
+      <div class="event-dot"></div>
+      <div class="event-body">
+        <div class="event-title">{{ e['event_type']|replace('_',' ')|title }}</div>
+        <div class="event-meta">{{ e['created_at'] }} · {{ e['location'] or '—' }}</div>
+        <div class="event-hash">hash: {{ e['chain_hash'][:32] }}…{% if e['anchored'] %} · anchored on-chain{% endif %}</div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  {% if readings %}
+  <div class="panel">
+    <div class="panel-header"><h3>Cold-chain summary</h3></div>
+    <div class="grid grid-3">
+      {% set temps = readings | selectattr('temperature_c','none') | list %}
+      <div class="stat">
+        <div class="stat-label">Readings logged</div>
+        <div class="stat-value">{{ readings|length }}</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Tamper events</div>
+        <div class="stat-value {{ 'warn' if readings|selectattr('tamper')|list|length else '' }}">{{ readings|selectattr('tamper')|list|length }}</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Open alerts</div>
+        <div class="stat-value {{ 'warn' if alerts|rejectattr('resolved')|list|length else '' }}">{{ alerts|rejectattr('resolved')|list|length }}</div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="panel">
+    <div class="panel-header"><h3>On-chain anchors</h3></div>
+    {% if anchors %}
+      {% for a in anchors %}
+      <div class="block-row">
+        <div class="block-num">#{{ a['block_number'] }}</div>
+        <div>
+          <div class="block-hash">{{ a['tx_hash'][:36] }}…</div>
+          <div class="block-meta">{{ a['network'] }} · {{ a['anchored_at'] }}</div>
+        </div>
+      </div>
+      {% endfor %}
+    {% else %}
+    <p class="hint">No anchors yet.</p>
+    {% endif %}
+  </div>
+
+  <footer class="public-foot">Generated by AgriTrace · SIH 26232 · Ministry of Food Processing Industries</footer>
+</div>
+</body>
+</html>

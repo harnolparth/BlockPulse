@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+{% block title %}Database — AgriTrace{% endblock %}
+{% block page_title %}Database{% endblock %}
+{% block page_sub %}<div class="topbar-sub">Every hash-chained record, exactly as stored — enforced immutable at the database layer</div>{% endblock %}
+
+{% block content %}
+
+<div class="panel panel-flat" style="display:flex; align-items:center; gap:12px; margin-bottom:18px;">
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--amber-100)" stroke-width="1.8" style="flex-shrink:0;"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3z"/><path d="M9.5 12l1.8 1.8L15 10.2"/></svg>
+  <div style="font-size:.86rem; color:#DCE7DF;">
+    Events, sensor readings and blockchain anchors below are protected by SQLite triggers —
+    once written, their content <b style="color:#fff;">cannot be edited or deleted</b> by the application,
+    a database browser, or the SQL command line. Only a batch's live status fields and an alert's
+    resolved flag remain editable.
+  </div>
+</div>
+
+<div class="pill-nav" id="dbTabs" style="margin-bottom:16px;">
+  <button class="pill active" data-tab="events">Events ({{ counts.events }})</button>
+  <button class="pill" data-tab="readings">Sensor readings ({{ counts.readings }})</button>
+  <button class="pill" data-tab="anchors">Blockchain anchors ({{ counts.anchors }})</button>
+  <button class="pill" data-tab="alerts">Alerts ({{ counts.alerts }})</button>
+  <button class="pill" data-tab="batches">Batches ({{ counts.batches }})</button>
+</div>
+
+<div class="panel db-tab" id="tab-events">
+  <div style="overflow-x:auto;">
+  <table>
+    <thead><tr><th>ID</th><th>Batch</th><th>Event</th><th>Actor</th><th>Location</th><th>Prev hash</th><th>Data hash</th><th>Chain hash</th><th>Anchored</th><th>Timestamp</th></tr></thead>
+    <tbody>
+    {% for e in events %}
+      <tr>
+        <td class="mono">{{ e['id'] }}</td>
+        <td class="mono"><a href="{{ url_for('batch_detail', batch_code=e['batch_code']) }}">{{ e['batch_code'] }}</a></td>
+        <td>{{ e['event_type']|replace('_',' ')|title }}</td>
+        <td>{{ e['actor_name'] or '—' }}{% if e['actor_role'] %} <span class="hint">({{ e['actor_role'] }})</span>{% endif %}</td>
+        <td>{{ e['location'] or '—' }}</td>
+        <td class="mono" title="{{ e['prev_hash'] }}">{{ e['prev_hash'][:10] }}…</td>
+        <td class="mono" title="{{ e['data_hash'] }}">{{ e['data_hash'][:10] }}…</td>
+        <td class="mono" title="{{ e['chain_hash'] }}">{{ e['chain_hash'][:10] }}…</td>
+        <td>{% if e['anchored'] %}<span class="badge badge-ok">Yes</span>{% else %}<span class="hint">No</span>{% endif %}</td>
+        <td class="hint">{{ e['created_at'] }}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="10"><div class="empty-state"><p>No events recorded yet.</p></div></td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+
+<div class="panel db-tab" id="tab-readings" style="display:none;">
+  <div style="overflow-x:auto;">
+  <table>
+    <thead><tr><th>ID</th><th>Batch</th><th>Node</th><th>Temp</th><th>Humidity</th><th>Gas</th><th>Tamper</th><th>Reading hash</th><th>Source</th><th>Captured</th></tr></thead>
+    <tbody>
+    {% for r in readings %}
+      <tr>
+        <td class="mono">{{ r['id'] }}</td>
+        <td class="mono">{% if r['batch_code'] %}<a href="{{ url_for('batch_detail', batch_code=r['batch_code']) }}">{{ r['batch_code'] }}</a>{% else %}<span class="hint">unlinked</span>{% endif %}</td>
+        <td class="mono">{{ r['node_code'] or '—' }}</td>
+        <td>{{ '%.1f'|format(r['temperature_c']) + '°C' if r['temperature_c'] is not none else '—' }}</td>
+        <td>{{ '%.0f'|format(r['humidity_pct']) + '%' if r['humidity_pct'] is not none else '—' }}</td>
+        <td>{{ r['gas_ppm']|int if r['gas_ppm'] is not none else '—' }}</td>
+        <td>{% if r['tamper'] %}<span class="badge badge-critical">Yes</span>{% else %}—{% endif %}</td>
+        <td class="mono" title="{{ r['reading_hash'] }}">{{ r['reading_hash'][:10] }}…</td>
+        <td class="hint">{{ r['source'] }}</td>
+        <td class="hint">{{ r['captured_at'] }}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="10"><div class="empty-state"><p>No sensor readings recorded yet.</p></div></td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+
+<div class="panel db-tab" id="tab-anchors" style="display:none;">
+  <div style="overflow-x:auto;">
+  <table>
+    <thead><tr><th>ID</th><th>Batch</th><th>Event</th><th>Block #</th><th>Tx hash</th><th>Data hash</th><th>Network</th><th>Mode</th><th>Anchored at</th></tr></thead>
+    <tbody>
+    {% for a in anchors %}
+      <tr>
+        <td class="mono">{{ a['id'] }}</td>
+        <td class="mono"><a href="{{ url_for('batch_detail', batch_code=a['batch_code']) }}">{{ a['batch_code'] }}</a></td>
+        <td>{{ (a['event_type'] or '—')|replace('_',' ')|title }}</td>
+        <td class="mono">#{{ a['block_number'] }}</td>
+        <td class="mono"><a href="{{ url_for('blockchain_tx', tx_hash=a['tx_hash']) }}" title="{{ a['tx_hash'] }}">{{ a['tx_hash'][:14] }}…</a></td>
+        <td class="mono" title="{{ a['data_hash'] }}">{{ a['data_hash'][:10] }}…</td>
+        <td class="hint">{{ a['network'] }}</td>
+        <td><span class="badge badge-ok">{{ a['mode']|capitalize }}</span></td>
+        <td class="hint">{{ a['anchored_at'] }}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="9"><div class="empty-state"><p>No blockchain anchors yet.</p></div></td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+
+<div class="panel db-tab" id="tab-alerts" style="display:none;">
+  <div style="overflow-x:auto;">
+  <table>
+    <thead><tr><th>ID</th><th>Batch</th><th>Type</th><th>Severity</th><th>Message</th><th>Status</th><th>Created</th></tr></thead>
+    <tbody>
+    {% for a in alerts %}
+      <tr>
+        <td class="mono">{{ a['id'] }}</td>
+        <td class="mono"><a href="{{ url_for('batch_detail', batch_code=a['batch_code']) }}">{{ a['batch_code'] }}</a></td>
+        <td>{{ a['alert_type']|replace('_',' ')|title }}</td>
+        <td><span class="badge badge-{{ 'critical' if a['severity']=='critical' else ('warn' if a['severity'] in ('high','medium') else 'ok') }}">{{ a['severity']|capitalize }}</span></td>
+        <td>{{ a['message'] }}</td>
+        <td>{% if a['resolved'] %}<span class="badge badge-ok">Resolved</span>{% else %}<span class="badge badge-warn">Open</span>{% endif %}</td>
+        <td class="hint">{{ a['created_at'] }}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="7"><div class="empty-state"><p>No alerts recorded yet.</p></div></td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+
+<div class="panel db-tab" id="tab-batches" style="display:none;">
+  <div style="overflow-x:auto;">
+  <table>
+    <thead><tr><th>ID</th><th>Batch code</th><th>Produce</th><th>Qty</th><th>Origin</th><th>Status</th><th>Genesis hash</th><th>Created</th></tr></thead>
+    <tbody>
+    {% for b in batches %}
+      <tr>
+        <td class="mono">{{ b['id'] }}</td>
+        <td class="mono"><a href="{{ url_for('batch_detail', batch_code=b['batch_code']) }}">{{ b['batch_code'] }}</a></td>
+        <td>{{ b['produce_type'] }}{% if b['variety'] %} <span class="hint">({{ b['variety'] }})</span>{% endif %}</td>
+        <td>{{ b['quantity_kg'] }} kg</td>
+        <td>{{ b['origin_location'] }}</td>
+        <td><span class="badge badge-{{ b['status'] }}">{{ b['status']|capitalize }}</span></td>
+        <td class="mono" title="{{ b['genesis_hash'] }}">{{ b['genesis_hash'][:10] }}…</td>
+        <td class="hint">{{ b['created_at'] }}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="8"><div class="empty-state"><p>No batches registered yet.</p></div></td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block topbar_action %}
+<script>
+document.querySelectorAll("#dbTabs .pill").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll("#dbTabs .pill").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll(".db-tab").forEach(t => t.style.display = "none");
+    btn.classList.add("active");
+    document.getElementById("tab-" + btn.dataset.tab).style.display = "block";
+  });
+});
+</script>
+{% endblock %}

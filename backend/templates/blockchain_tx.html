@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Tx {{ anchor['tx_hash'][:10] }} — AgriTrace{% endblock %}
+{% block page_title %}Anchor detail{% endblock %}
+{% block page_sub %}<a href="{{ url_for('blockchain_page') }}" class="hint">← Back to explorer</a>{% endblock %}
+
+{% block content %}
+<div class="panel">
+  <div class="panel-header"><h2>Transaction</h2><span class="badge badge-ok">{{ anchor['mode']|capitalize }}</span></div>
+  <table>
+    <tbody>
+      <tr><th style="width:180px;">Batch</th><td><a href="{{ url_for('batch_detail', batch_code=anchor['batch_code']) }}">{{ anchor['batch_code'] }}</a></td></tr>
+      <tr><th>Event</th><td>{{ (anchor['event_type'] or '')|replace('_',' ')|title }}</td></tr>
+      <tr><th>Tx hash</th><td class="mono" style="word-break:break-all;">{{ anchor['tx_hash'] }}</td></tr>
+      <tr><th>Block number</th><td>#{{ anchor['block_number'] }}</td></tr>
+      <tr><th>Data hash</th><td class="mono" style="word-break:break-all;">{{ anchor['data_hash'] }}</td></tr>
+      <tr><th>Network</th><td>{{ anchor['network'] }}</td></tr>
+      <tr><th>Anchored at</th><td>{{ anchor['anchored_at'] }}</td></tr>
+      {% if anchor['location'] %}<tr><th>Location</th><td>{{ anchor['location'] }}</td></tr>{% endif %}
+      {% if anchor['notes'] %}<tr><th>Notes</th><td>{{ anchor['notes'] }}</td></tr>{% endif %}
+    </tbody>
+  </table>
+</div>
+
+{% if block %}
+<div class="panel">
+  <div class="panel-header"><h3>Simulated block header</h3></div>
+  <p class="hint">This ledger is structurally identical to a real chain — each block references the previous block's hash — which is why the trust engine and this explorer work unmodified whether AgriTrace is anchoring to the local simulated ledger or a real Polygon contract.</p>
+  <table>
+    <tbody>
+      <tr><th style="width:180px;">Block hash</th><td class="mono" style="word-break:break-all;">{{ block['block_hash'] }}</td></tr>
+      <tr><th>Previous block hash</th><td class="mono" style="word-break:break-all;">{{ block['prev_block_hash'] }}</td></tr>
+    </tbody>
+  </table>
+</div>
+{% endif %}
+{% endblock %}

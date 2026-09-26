@@ -1,0 +1,93 @@
+{% import "_icons.html" as icons %}
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sign in — AgriTrace</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+<link rel="icon" href="{{ url_for('static', filename='img/agritrace-logo.png') }}">
+</head>
+<body>
+<div class="split-screen">
+  <div class="split-visual">
+    <div>
+      <div class="landing-logo-row">
+        <img src="{{ url_for('static', filename='img/agritrace-logo.png') }}" alt="AgriTrace logo" class="landing-logo">
+        <div class="landing-credit">Developed by <b>BlockPulse</b></div>
+      </div>
+      <h1>One login screen, every role in the chain.</h1>
+      <p class="desc">AgriTrace runs four portals — Admin, Farmer, Warehouse and Distributor — behind a single sign-in. Each role only sees and can act on its own stage of the supply chain; the hash chain and Trust Engine tie every stage's record together underneath.</p>
+    </div>
+    <div class="grid grid-2" style="position:relative; margin-top:10px;">
+      <div>
+        <div class="stat-value" style="color:var(--forest-950); font-size:1.4rem;">7-stage</div>
+        <div class="stat-foot" style="color:var(--ink-400);">farm-to-fork journey</div>
+      </div>
+      <div>
+        <div class="stat-value" style="color:var(--forest-950); font-size:1.4rem;">SHA-256</div>
+        <div class="stat-foot" style="color:var(--ink-400);">hash-chained, tamper-evident</div>
+      </div>
+    </div>
+    <div class="demo-creds">
+      Public verification needs no account — visit <a href="{{ url_for('consumer_page') }}">Consumer scan</a> any time to open a batch's passport.
+    </div>
+  </div>
+
+  <div class="split-form">
+    <div class="login-card">
+      <h2>Sign in</h2>
+      <p class="hint" style="margin-bottom:16px;">Pick a role to preview it, or sign in with your own account.</p>
+      {% if error %}<div class="flash-error">{{ error }}</div>{% endif %}
+
+      <div class="role-grid" id="roleGrid">
+        <div class="role-card" data-user="admin" data-pass="admin123">
+          <div class="role-card-top"><span class="role-card-icon">{{ icons.role_icon('admin') }}</span><span class="role-card-title">Admin</span></div>
+          <div class="role-card-desc">Full visibility — every batch, every role's actions, blockchain explorer.</div>
+          <span class="role-card-cred">admin / admin123</span>
+        </div>
+        <div class="role-card" data-user="farmer1" data-pass="farmer123">
+          <div class="role-card-top"><span class="role-card-icon">{{ icons.role_icon('farmer') }}</span><span class="role-card-title">Farmer</span></div>
+          <div class="role-card-desc">Registers batches at harvest, hands off to the collection centre.</div>
+          <span class="role-card-cred">farmer1 / farmer123</span>
+        </div>
+        <div class="role-card" data-user="warehouse1" data-pass="warehouse123">
+          <div class="role-card-top"><span class="role-card-icon">{{ icons.role_icon('warehouse') }}</span><span class="role-card-title">Warehouse</span></div>
+          <div class="role-card-desc">Confirms transport dispatch and warehouse / ripening intake.</div>
+          <span class="role-card-cred">warehouse1 / warehouse123</span>
+        </div>
+        <div class="role-card" data-user="distributor1" data-pass="distributor123">
+          <div class="role-card-top"><span class="role-card-icon">{{ icons.role_icon('distributor') }}</span><span class="role-card-title">Distributor</span></div>
+          <div class="role-card-desc">Receives at distribution, moves to retail, marks batches sold.</div>
+          <span class="role-card-cred">distributor1 / distributor123</span>
+        </div>
+      </div>
+
+      <form method="post" action="{{ url_for('login_page') }}" id="loginForm">
+        <input type="hidden" name="next" value="{{ next_url }}">
+        <div class="field">
+          <label for="username">Username</label>
+          <input id="username" name="username" autocomplete="username" required>
+        </div>
+        <div class="field">
+          <label for="password">Password</label>
+          <input id="password" name="password" type="password" autocomplete="current-password" required>
+        </div>
+        <button class="btn" type="submit" style="width:100%; justify-content:center;">Sign in</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+document.querySelectorAll(".role-card").forEach(card => {
+  card.addEventListener("click", () => {
+    document.querySelectorAll(".role-card").forEach(c => c.classList.remove("selected"));
+    card.classList.add("selected");
+    document.getElementById("username").value = card.dataset.user;
+    document.getElementById("password").value = card.dataset.pass;
+  });
+});
+</script>
+</body>
+</html>

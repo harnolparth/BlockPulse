@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Track batches — AgriTrace{% endblock %}
+{% block page_title %}Track batches{% endblock %}
+
+{% block content %}
+<form class="search-bar" method="get" action="{{ url_for('track_page') }}">
+  <input type="text" name="q" value="{{ q }}" placeholder="Search batch code, produce or origin…" style="max-width:340px;">
+  <button class="btn btn-secondary" type="submit">Search</button>
+</form>
+
+<div class="pill-nav" style="margin-bottom:18px;">
+  <a class="pill {{ 'active' if not status_filter }}" href="{{ url_for('track_page', q=q) }}">All</a>
+  {% for s in stage_flow %}
+  <a class="pill {{ 'active' if status_filter == s.key }}" href="{{ url_for('track_page', q=q, status=s.key) }}">{{ s.label }}</a>
+  {% endfor %}
+</div>
+
+<div class="panel">
+  {% if batches %}
+  <table>
+    <thead><tr><th>Batch</th><th>Produce</th><th>Stage</th><th>Quantity</th><th>Origin</th><th>Harvested</th><th></th></tr></thead>
+    <tbody>
+    {% for b in batches %}
+      <tr class="clickable" onclick="window.location='{{ url_for('batch_detail', batch_code=b['batch_code']) }}'">
+        <td class="mono">{{ b['batch_code'] }}</td>
+        <td>{{ b['produce_type'] }}</td>
+        <td><span class="badge badge-{{ b['status'] }}">{{ b['status']|capitalize }}</span></td>
+        <td>{{ b['quantity_kg'] }} kg</td>
+        <td>{{ b['origin_location'] }}</td>
+        <td>{{ b['harvest_date'] }}</td>
+        <td><a href="{{ url_for('batch_detail', batch_code=b['batch_code']) }}">Open →</a></td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty-state"><h3>No matching batches</h3><p>Try a different search term or clear the filter.</p></div>
+  {% endif %}
+</div>
+{% endblock %}

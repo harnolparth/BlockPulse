@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+{% import "_icons.html" as icons %}
+{% block title %}{{ batch['batch_code'] }} — AgriTrace{% endblock %}
+{% block page_title %}{{ batch['batch_code'] }}{% endblock %}
+{% block page_sub %}<div class="topbar-sub">{{ batch['produce_type'] }}{% if batch['variety'] %} · {{ batch['variety'] }}{% endif %} · {{ batch['quantity_kg'] }} kg · from {{ batch['origin_location'] }}</div>{% endblock %}
+{% block content %}
+
+<div class="panel">
+  <div class="panel-header"><h2>Supply-chain journey</h2><span class="badge badge-{{ batch['status'] }}">{{ batch['status']|capitalize }}</span></div>
+  <div class="journey">
+    {% for s in stage_flow %}
+    <div class="journey-stage {{ 'done' if loop.index0 < stage_index else ('current' if loop.index0 == stage_index else '') }}">
+      <div class="line"></div>
+      <div class="dot">{{ icons.stage_icon(s.key) }}</div>
+      <div class="label">{{ s.label }}</div>
+      {% if loop.index0 == stage_index %}<div class="sub">Current</div>{% endif %}
+    </div>
+    {% endfor %}
+  </div>
+
+  {% if can_advance %}
+  <hr class="divider">
+  <h3>Advance to {{ next_stage.label }}</h3>
+  <form method="post" action="{{ url_for('batch_advance', batch_code=batch['batch_code']) }}">
+    <div class="field-row">
+      <div class="field">
+        <label for="location">Location</label>
+        <input id="location" name="location" value="{{ batch['origin_location'] }}">
+      </div>
+      <div class="field">
+        <label for="notes">Notes</label>
+        <input id="notes" name="notes" placeholder="Optional handover notes">
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label for="temperature_c">Temperature reading (°C) <span class="hint">optional</span></label>
+        <input id="temperature_c" name="temperature_c" type="number" step="0.1" placeholder="e.g. 9.2">
+      </div>
+      <div class="field">
+        <label for="humidity_pct">Humidity (%) <span class="hint">optional</span></label>
+        <input id="humidity_pct" name="humidity_pct" type="number" step="0.1" placeholder="e.g. 68">
+      </div>
+    </div>
+    <div class="field checkbox-row">
+      <input type="checkbox" id="tamper" name="tamper" value="1">
+      <label for="tamper" style="margin:0;">Reed-switch tamper flag triggered</label>
+    </div>
+    <button class="btn" type="submit">Confirm handover — anchors {{ next_stage.event }} event</button>
+  </form>
+  {% elif next_stage %}
+  <hr class="divider">
+  <p class="hint">Waiting on a <b>{{ next_stage.role }}</b> account to confirm the move to {{ next_stage.label }}.</p>
+  {% else %}
+  <hr class="divider">
+  <p class="hint">This batch has completed its journey to the consumer.</p>
+  {% endif %}
+</div>
+
+<div class="grid grid-2">
+  <div class="panel">
+    <div class="panel-header"><h3>Event chain</h3></div>
+    {% for e in events|reverse %}
+    <div class="event-item">
+      <div class="event-dot"></div>
+      <div class="event-body">
+        <div class="event-title">{{ e['event_type']|replace('_',' ')|title }}</div>
+        <div class="event-meta">{{ e['created_at'] }} · {{ e['location'] or '—' }}{% if e['anchored'] %} · <span class="badge badge-ok">Anchored</span>{% endif %}</div>
+        {% if e['notes'] %}<div class="event-meta">{{ e['notes'] }}</div>{% endif %}
+        <div class="event-hash">chain: {{ e['chain_hash'][:24] }}…</div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="panel">
+    <div class="panel-header"><h3>Trust score</h3></div>
+    <div style="display:flex; gap:18px; align-items:center;">
+      <div class="trust-gauge" style="background:conic-gradient({{ '#3E8D5C' if trust.score>=85 else ('#C0932F' if trust.score>=65 else '#B23B34') }} {{ trust.score*3.6 }}deg, #E9E4D6 0deg);">
+        <div class="trust-gauge-inner">
+          <div class="score">{{ trust.score }}</div>
+          <div class="grade">Grade {{ trust.grade }}</div>
+        </div>
+      </div>
+      <div style="flex:1;">
+        {% for f in trust.breakdown %}
+        <div style="display:flex; justify-content:space-between; font-size:.82rem; padding:4px 0; border-bottom:1px solid var(--line-200);">
+          <span>{{ f.factor }}</span>
+          <span style="color:{{ '#B23B34' if f.impact < 0 else '#3E8D5C' }}; font-weight:600;">{{ f.impact if f.impact != 0 else '✓' }}</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="grid grid-2">
+  <div class="panel">
+    <div class="panel-header"><h3>Sensor readings</h3><span class="hint">{{ readings|length }} recorded</span></div>
+    {% if readings %}
+    <canvas class="chart-canvas" id="tempChart"></canvas>
+    <table style="margin-top:10px;">
+      <thead><tr><th>Time</th><th>Temp</th><th>Humidity</th><th>Gas</th><th>Tamper</th></tr></thead>
+      <tbody>
+      {% for r in readings[-6:]|reverse %}
+        <tr>
+          <td class="hint">{{ r['captured_at'] }}</td>
+          <td>{{ '%.1f'|format(r['temperature_c']) + '°C' if r['temperature_c'] is not none else '—' }}</td>
+          <td>{{ '%.0f'|format(r['humidity_pct']) + '%' if r['humidity_pct'] is not none else '—' }}</td>
+          <td>{{ r['gas_ppm']|int if r['gas_ppm'] is not none else '—' }}</td>
+          <td>{% if r['tamper'] %}<span class="badge badge-critical">Yes</span>{% else %}—{% endif %}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state"><p>No sensor readings linked to this batch yet.</p></div>
+    {% endif %}
+  </div>
+
+  <div class="panel">
+    <div class="panel-header"><h3>Blockchain anchors</h3></div>
+    {% if anchors %}
+      {% for a in anchors %}
+      <div class="block-row">
+        <div class="block-num">#{{ a['block_number'] }}</div>
+        <div style="flex:1;">
+          <div class="block-hash"><a href="{{ url_for('blockchain_tx', tx_hash=a['tx_hash']) }}">{{ a['tx_hash'][:28] }}…</a></div>
+          <div class="block-meta">{{ a['network'] }} · {{ a['anchored_at'] }}</div>
+        </div>
+      </div>
+      {% endfor %}
+    {% else %}
+    <div class="empty-state"><p>No on-chain anchors yet.</p></div>
+    {% endif %}
+  </div>
+</div>
+
+{% if alerts %}
+<div class="panel">
+  <div class="panel-header"><h3>Alerts for this batch</h3></div>
+  {% for a in alerts %}
+  <div class="alert-row">
+    <div class="alert-icon {{ a['severity'] }}">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17h.01"/></svg>
+    </div>
+    <div>
+      <div class="event-title">{{ a['message'] }}</div>
+      <div class="event-meta">{{ a['created_at'] }} · {{ 'Resolved' if a['resolved'] else 'Open' }}</div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block head %}
+<script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+{% endblock %}
+
+{% block topbar_action %}
+<a class="btn btn-secondary" href="{{ url_for('verify_page', batch_code=batch['batch_code']) }}" target="_blank">Public passport →</a>
+<script>
+window.addEventListener("DOMContentLoaded", () => {
+  const readings = {{ readings_json|tojson }};
+  const series = readings.filter(r => r.temperature_c !== null).map(r => ({t:r.captured_at, v:r.temperature_c}));
+  const c = document.getElementById("tempChart");
+  if(c) AgriCharts.drawLineChart(c, series, {threshold: 12, color:"#3E8D5C"});
+});
+</script>
+{% endblock %}

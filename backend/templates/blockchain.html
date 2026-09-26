@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Blockchain — AgriTrace{% endblock %}
+{% block page_title %}Blockchain explorer{% endblock %}
+{% block page_sub %}<div class="topbar-sub">{{ network }} · mode: <b>{{ mode }}</b>{% if mode == 'simulated' %} — set POLYGON_RPC_URL / POLYGON_PRIVATE_KEY / POLYGON_CONTRACT_ADDRESS to anchor for real{% endif %}</div>{% endblock %}
+
+{% block content %}
+<div class="panel" style="display:flex; align-items:center; gap:12px; margin-bottom:18px; border-color:var(--leaf-500);">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--leaf-600)" stroke-width="1.8" style="flex-shrink:0;"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3z"/><path d="M9.5 12l1.8 1.8L15 10.2"/></svg>
+  <div style="font-size:.86rem; color:var(--ink-600);">
+    Every anchor below is <b style="color:var(--forest-950);">write-once</b>: its tx hash, data hash and block
+    number are enforced immutable by the database itself — no update or delete on this table is possible
+    through the app, a DB browser, or raw SQL. See the <a href="{{ url_for('database_page') }}">Database</a> page for the full record set.
+  </div>
+</div>
+<div class="panel panel-flat">
+  <div class="grid grid-3">
+    <div>
+      <div class="stat-label" style="color:#B9CBBD;">Total anchors</div>
+      <div class="stat-value" style="color:#fff;">{{ anchors|length }}</div>
+    </div>
+    <div>
+      <div class="stat-label" style="color:#B9CBBD;">Network</div>
+      <div class="stat-value" style="color:#fff; font-size:1.2rem;">{{ network }}</div>
+    </div>
+    <div>
+      <div class="stat-label" style="color:#B9CBBD;">Anchoring mode</div>
+      <div class="stat-value" style="color:#fff; font-size:1.2rem; text-transform:capitalize;">{{ mode }}</div>
+    </div>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="panel-header"><h2>Anchored records</h2></div>
+  {% if anchors %}
+    {% for a in anchors %}
+    <div class="block-row">
+      <div class="block-num">#{{ a['block_number'] }}</div>
+      <div style="flex:1;">
+        <div><a href="{{ url_for('blockchain_tx', tx_hash=a['tx_hash']) }}">{{ a['batch_code'] }}</a> · {{ (a['event_type'] or '')|replace('_',' ')|title }}</div>
+        <div class="block-hash">{{ a['tx_hash'][:36] }}…</div>
+        <div class="block-meta">{{ a['anchored_at'] }} · data hash {{ a['data_hash'][:16] }}…</div>
+      </div>
+    </div>
+    {% endfor %}
+  {% else %}
+  <div class="empty-state"><h3>No anchors yet</h3><p>Register a batch and advance it through the supply chain to see anchors appear here.</p></div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -30,6 +30,7 @@ import core
 app = Flask(__name__)
 app.secret_key = auth.SECRET_KEY
 chain_service = blockchain.get_blockchain_service()
+db.init_db()
 
 STAGE_FLOW = [
     {"key": "farm", "label": "Farm", "icon": "farm", "event": "HARVEST", "role": "farmer"},

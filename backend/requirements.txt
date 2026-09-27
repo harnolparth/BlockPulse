@@ -11,3 +11,4 @@ requests==2.33.1
 # Optional — only needed for REAL anchoring on the Polygon Amoy testnet.
 # Leave commented out to stay on the simulated (offline, zero-setup) chain.
 # web3==6.20.1
+gunicorn

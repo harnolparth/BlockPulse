@@ -26,11 +26,18 @@ import auth
 import integrity
 import blockchain
 import core
-
 app = Flask(__name__)
 app.secret_key = auth.SECRET_KEY
-chain_service = blockchain.get_blockchain_service()
+
 db.init_db()
+chain_service = blockchain.get_blockchain_service()
+
+conn = db.get_conn()
+try:
+    import seed_demo
+    seed_demo.run(conn, chain_service, core)
+finally:
+    conn.close()
 
 STAGE_FLOW = [
     {"key": "farm", "label": "Farm", "icon": "farm", "event": "HARVEST", "role": "farmer"},
